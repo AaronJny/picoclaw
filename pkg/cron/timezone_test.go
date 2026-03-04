@@ -33,9 +33,9 @@ func TestComputeNextRun_CronTimezone(t *testing.T) {
 			wantHour: 1, // 9:00 CST = 1:00 UTC
 		},
 		{
-			name:     "empty TZ defaults to Asia/Shanghai",
+			name:     "empty TZ defaults to UTC",
 			tz:       "",
-			wantHour: 1, // should default to Asia/Shanghai
+			wantHour: 9, // should default to UTC
 		},
 		{
 			name:     "US/Eastern timezone",
@@ -73,12 +73,15 @@ func TestComputeNextRun_CronTimezone(t *testing.T) {
 	}
 }
 
-// TestComputeNextRun_DefaultTZ_NotUTC verifies that when TZ is empty,
-// the computed next run differs from a pure UTC computation.
-func TestComputeNextRun_DefaultTZ_NotUTC(t *testing.T) {
+// TestComputeNextRun_DefaultTZ_AppliesWhenSet verifies that when TZ is empty
+// and no service default is set, the computation uses UTC.
+func TestComputeNextRun_DefaultTZ_AppliesWhenSet(t *testing.T) {
 	tmpDir := t.TempDir()
 	storePath := filepath.Join(tmpDir, "jobs.json")
 	cs := NewCronService(storePath, nil)
+
+	// Set a non-UTC default to verify it takes effect
+	cs.SetDefaultTimezone("Asia/Shanghai")
 
 	now := time.Date(2026, 3, 4, 2, 0, 0, 0, time.UTC) // 02:00 UTC = 10:00 CST
 	nowMS := now.UnixMilli()
@@ -93,12 +96,12 @@ func TestComputeNextRun_DefaultTZ_NotUTC(t *testing.T) {
 		t.Fatal("computeNextRun returned nil")
 	}
 
-	// With empty TZ (default Asia/Shanghai), 9:00 CST already passed (it's 10:00 CST),
-	// so next run should be tomorrow 9:00 CST = today 01:00 UTC + 24h.
-	// With UTC, 9:00 UTC hasn't happened yet (it's 02:00 UTC), so next run = today 9:00 UTC.
-	// They must differ.
+	// With service default Asia/Shanghai, 9:00 CST already passed (it's 10:00 CST),
+	// so next run should be tomorrow 9:00 CST.
+	// With explicit UTC, 9:00 UTC hasn't happened yet (it's 02:00 UTC).
+	// They must differ, proving SetDefaultTimezone takes effect.
 	if *nextEmpty == *nextUTC {
-		t.Errorf("empty TZ and UTC TZ produced same next run time, default TZ is not working")
+		t.Errorf("service default TZ (Asia/Shanghai) and UTC produced same next run time")
 	}
 }
 
@@ -115,7 +118,7 @@ func TestComputeNextRun_ServiceDefaultTZ(t *testing.T) {
 	now := time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC)
 	nowMS := now.UnixMilli()
 
-	// Schedule with empty TZ should use service default (US/Eastern), not Asia/Shanghai
+	// Schedule with empty TZ should use service default (US/Eastern), not UTC
 	scheduleEmpty := &CronSchedule{Kind: "cron", Expr: "0 9 * * *", TZ: ""}
 	scheduleCST := &CronSchedule{Kind: "cron", Expr: "0 9 * * *", TZ: "Asia/Shanghai"}
 

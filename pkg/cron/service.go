@@ -267,16 +267,18 @@ func (cs *CronService) computeNextRun(schedule *CronSchedule, nowMS int64) *int6
 
 		// Use gronx to calculate next run time
 		now := time.UnixMilli(nowMS)
-		// Apply timezone: schedule.TZ > service default > "Asia/Shanghai"
+		// Apply timezone: schedule.TZ > service default > UTC
 		tz := schedule.TZ
 		if tz == "" {
 			tz = cs.defaultTZ
 		}
 		if tz == "" {
-			tz = "Asia/Shanghai"
+			tz = "UTC"
 		}
 		if loc, err := time.LoadLocation(tz); err == nil {
 			now = now.In(loc)
+		} else {
+			log.Printf("[cron] warning: failed to load timezone '%s': %v, using UTC", tz, err)
 		}
 		nextTime, err := gronx.NextTickAfter(schedule.Expr, now, false)
 		if err != nil {
@@ -326,7 +328,7 @@ func (cs *CronService) SetOnJob(handler JobHandler) {
 }
 
 // SetDefaultTimezone sets the default timezone for cron expressions.
-// If empty, falls back to "Asia/Shanghai".
+// If empty, falls back to UTC.
 func (cs *CronService) SetDefaultTimezone(tz string) {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
