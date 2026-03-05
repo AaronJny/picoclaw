@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// TestComputeNextRun_CronTimezone verifies Patch #4: cron expressions should
-// respect the schedule.TZ field instead of always using UTC.
+// TestComputeNextRun_CronTimezone verifies that cron expressions respect
+// the schedule.TZ field instead of always using UTC.
 func TestComputeNextRun_CronTimezone(t *testing.T) {
 	tmpDir := t.TempDir()
 	storePath := filepath.Join(tmpDir, "jobs.json")
@@ -73,8 +73,8 @@ func TestComputeNextRun_CronTimezone(t *testing.T) {
 	}
 }
 
-// TestComputeNextRun_DefaultTZ_AppliesWhenSet verifies that when TZ is empty
-// and no service default is set, the computation uses UTC.
+// TestComputeNextRun_DefaultTZ_AppliesWhenSet verifies that SetDefaultTimezone
+// takes effect when schedule.TZ is empty (service default overrides UTC fallback).
 func TestComputeNextRun_DefaultTZ_AppliesWhenSet(t *testing.T) {
 	tmpDir := t.TempDir()
 	storePath := filepath.Join(tmpDir, "jobs.json")
